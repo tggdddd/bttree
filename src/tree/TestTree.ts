@@ -1,12 +1,5 @@
-import BTree, {BCompositeBatchAll, BCompositeRandomSequence, BCompositeSequence, BRevertDecorator} from "../base/BNode";
-import {
-    ActionAttack,
-    ActionRecovery,
-    ActionSkill,
-    ActionSleep,
-    ConditionalHPRight,
-    ConditionalMpSafe
-} from "./Role/Man";
+import BTree, {BCompositeSequence} from "../base/BNode";
+import {ActionAttack, ActionSkill, ConditionalHPRight} from "./Role/Man";
 import {ActionLog} from "./TestTree/ActionLog";
 
 export class TestTree extends BTree {
@@ -39,11 +32,11 @@ export class TestTree extends BTree {
                 // ),
 
                 // new ActionSleep(500),
-                new ActionLog("action记录"),
+            new ActionLog("记录1111"),
 
-                new ActionLog("action记录"),
+            new ActionLog("记录2222"),
 
-                new ActionLog("action记录"),
+            new ActionLog("记录33333"),
                 new BCompositeSequence(
                     new BCompositeSequence(
                         new ConditionalHPRight(10),

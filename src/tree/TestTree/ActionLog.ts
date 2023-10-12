@@ -7,6 +7,7 @@ export class ActionLog extends BAction{
         this.msg = msg
     }
     async update(): Promise<BNodeStatus> {
+        await super.update();
         console.log(this.msg)
         return BNodeStatus.SUCCESS
     }

@@ -7,6 +7,7 @@ export class Man extends Singleton{
 }
 export class ActionAttack extends BAction{
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const old = Man.getInstance<Man>().mp
         const now = Man.getInstance<Man>().mp -= 10;
         console.log(`受到攻击，血量从${old}降为${now}`)
@@ -25,6 +26,7 @@ export class ActionSkill extends BAction{
         console.log("技能释放前摇")
     }
     async update(): Promise<BNodeStatus> {
+        await super.update();
         if (Date.now() - this.startTime > this.duration){
             const old = Man.getInstance<Man>().hp
             Man.getInstance<Man>().hp -= this.use;
@@ -40,6 +42,7 @@ export class ConditionalMpSafe extends BConditional{
         super();
     }
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const now = Man.getInstance<Man>().mp
         const flag = now >  this.number
         console.log(`判定，目前血量${now}`+(flag?"":"不")+"满足条件")
@@ -52,6 +55,7 @@ export class ConditionalHPRight extends BConditional{
         super();
     }
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const now = Man.getInstance<Man>().hp
         const flag = now > this.number
         console.log(`判定，目前蓝条${now}`+(flag?"":"不")+"满足条件")
@@ -60,6 +64,7 @@ export class ConditionalHPRight extends BConditional{
 }
 export class ActionRecovery extends BAction{
     async update(): Promise<BNodeStatus> {
+        await super.update();
         Man.getInstance<Man>().mp += 20;
         console.log(`吃到食物，增加20滴血，目前血量${Man.getInstance<Man>().mp}`)
         return await super.update();
@@ -78,6 +83,7 @@ export class ActionSleep extends BAction{
     }
 
     async update(): Promise<BNodeStatus> {
+        await super.update();
         console.log("休息中")
         if (Date.now() - this.startTime > this.duration){
             console.log("休息结束")

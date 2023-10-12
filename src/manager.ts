@@ -3,7 +3,7 @@ import BTree from "./base/BNode";
 import {BNodeDebug} from "./base/nodeDebug";
 import {Singleton} from "./base/BUtils";
 
-class Manager extends Singleton {
+export class Manager extends Singleton {
     trees:Array<BTree> = []
     debug:boolean = true
     constructor() {
@@ -15,11 +15,6 @@ class Manager extends Singleton {
     async run() {
         if (Manager.getInstance<Manager>().debug && BNodeDebug.pause) {
             return
-        }
-        if (Manager.getInstance<Manager>().debug && BNodeDebug.delay) {
-            await new Promise(resolve => {
-                setTimeout(() => resolve(null), BNodeDebug.delay)
-            })
         }
         for (const tree of this.trees) {
             tree.run().then()

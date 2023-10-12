@@ -1,5 +1,6 @@
 import BUtils, {extendOf} from "./BUtils";
 import {BNodeDebug} from "./nodeDebug";
+import {Manager} from "../manager";
 
 export class BNode {
     name: string = null
@@ -67,6 +68,11 @@ export class BNode {
     }
 
     async update(): Promise<BNodeStatus> {
+        if (Manager.getInstance<Manager>().debug && BNodeDebug.delay) {
+            await new Promise(resolve => {
+                setTimeout(() => resolve(null), BNodeDebug.delay)
+            })
+        }
         return this.status = BNodeStatus.SUCCESS
     }
 
@@ -97,7 +103,7 @@ export class BNode {
             if (this.type !== BConditionalType.NORMAL) {
                 // @ts-ignore
                 BUtils.conditionMap.get(this.key).add(this)
-                console.error(BUtils.conditionMap.get(this.key))
+                // console.error(BUtils.conditionMap.get(this.key))
             }
         } else if (extendOf(this, BComposite)) {
             const conditionals = BUtils.conditionMap.get(this.key)
@@ -107,7 +113,7 @@ export class BNode {
                     deletes.push(value)
                 }
             })
-            console.error(deletes, "122222222222222222222222222222")
+            // console.error(deletes, "122222222222222222222222222222")
             deletes.forEach(a => {
                 conditionals.delete(a)
             })
@@ -116,7 +122,7 @@ export class BNode {
         //todo  判断是否需要清空    逻辑判定
         // BUtils.conditionMap.get(this.key).clear()
         // }
-        console.error(BUtils.conditionMap.get(this.key))
+        // console.error(BUtils.conditionMap.get(this.key))
     }
 
     async run() {
@@ -237,24 +243,28 @@ async function sequenceUpdate(node: BComposite): Promise<BNodeStatus> {
 
 export class BCompositeSelector extends BComposite {
     async update(): Promise<BNodeStatus> {
+        await super.update();
         return await selectorUpdate(this)
     }
 }
 
 export class BCompositeRandomSelector extends BCompositeRandom {
     async update(): Promise<BNodeStatus> {
+        await super.update();
         return await selectorUpdate(this)
     }
 }
 
 export class BCompositeRandomSequence extends BCompositeRandom {
     async update(): Promise<BNodeStatus> {
+        await super.update();
         return await sequenceUpdate(this)
     }
 }
 
 export class BCompositeSequence extends BComposite {
     async update(): Promise<BNodeStatus> {
+        await super.update();
         return await sequenceUpdate(this)
     }
 }
@@ -266,6 +276,7 @@ export class BCompositeBatchRace extends BComposite {
     }
 
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const key = this.key;
         let running: Array<string> = []
         const that = this
@@ -322,6 +333,7 @@ export class BCompositeBatchAll extends BComposite {
     }
 
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const key = this.key;
         const running: Array<string> = []
         await Promise.all(this.runUid.split(",").map(runUid => {
@@ -416,6 +428,7 @@ export default class BTree {
 
 export class BRevertDecorator extends BDecorator {
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const node = this.children[0]
         const status = await node.run()
         if (status == BNodeStatus.FAILURE) {
@@ -446,6 +459,7 @@ export class BRepeatDecorator extends BDecorator {
     }
 
     async update(): Promise<BNodeStatus> {
+        await super.update();
         const node = this.children[0]
         const status = await node.run()
         if (status == BNodeStatus.FAILURE) {
