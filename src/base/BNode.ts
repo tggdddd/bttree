@@ -1,10 +1,25 @@
 import BUtils, {extendOf} from "./BUtils";
+import {BNodeDebug} from "./nodeDebug";
 
 export class BNode {
-    status: BNodeStatus = BNodeStatus.INACTIVE;
+    name: string = null
+    private _status: BNodeStatus = BNodeStatus.INACTIVE;
+    get status(): BNodeStatus {
+        return this._status
+    }
+
+    set status(val: BNodeStatus) {
+        this._status = val
+        if (BNodeDebug.debug) {
+            const debug = BNodeDebug.getInstance<BNodeDebug>();
+            debug.updateStatus(this.uid, this.key, this.status);
+        }
+    }
+
     uid: string = "" //标识树内节点
     key: string = ""  //标识树
     prevStatus: BNodeStatus = BNodeStatus.INACTIVE
+
     async start() {
         // console.info(BNode.getUidDesc(this.uid),this.constructor.name,"开始执行start")
         this.status = BNodeStatus.RUNNING
@@ -55,6 +70,24 @@ export class BNode {
         return this.status = BNodeStatus.SUCCESS
     }
 
+    static getText(i: any) {
+        switch (i) {
+            case BNodeStatus.INACTIVE:
+                return "INACTIVE"
+            case BNodeStatus.RUNNING:
+                return "RUNNING"
+            case BNodeStatus.FAILURE:
+                return "FAILURE"
+            case BNodeStatus.SUCCESS:
+                return "SUCCESS"
+        }
+    }
+
+    static getUidDesc(uid: string) {
+        const curUIDInfo = BUtils.getCurUIDInfo(uid);
+        return curUIDInfo.level + "-" + curUIDInfo.index
+    }
+
     end() {
         // console.info(BNode.getUidDesc(this.uid),this.constructor.name,"开始执行end")
         this.status = BNodeStatus.INACTIVE
@@ -68,13 +101,13 @@ export class BNode {
             }
         } else if (extendOf(this, BComposite)) {
             const conditionals = BUtils.conditionMap.get(this.key)
-            const deletes:Array<BConditional> = []
+            const deletes: Array<BConditional> = []
             conditionals.forEach(value => {
                 if (value.type == BConditionalType.INNER) {
                     deletes.push(value)
                 }
             })
-            console.error(deletes,"122222222222222222222222222222")
+            console.error(deletes, "122222222222222222222222222222")
             deletes.forEach(a => {
                 conditionals.delete(a)
             })
@@ -85,28 +118,13 @@ export class BNode {
         // }
         console.error(BUtils.conditionMap.get(this.key))
     }
-    static getText(i:any){
-        switch (i){
-            case BNodeStatus.INACTIVE:
-                return "INACTIVE"
-            case BNodeStatus.RUNNING:
-                return "RUNNING"
-            case BNodeStatus.FAILURE:
-                return "FAILURE"
-            case BNodeStatus.SUCCESS:
-                return "SUCCESS"
-        }
-    }
-    static getUidDesc(uid:string){
-        const curUIDInfo = BUtils.getCurUIDInfo(uid);
-        return curUIDInfo.level+"-"+curUIDInfo.index
-    }
+
     async run() {
         if (this.status == BNodeStatus.INACTIVE) {
             await this.start()
         }
         const status = await this.update()
-        // console.info(BNode.getUidDesc(this.uid),this.constructor.name,"开始执行update 执行结果为",BNode.getText(status))
+        this.status = status
         if (status != BNodeStatus.RUNNING) {
             this.prevStatus = status
             this.end()
@@ -153,7 +171,7 @@ export class BConditional extends BNode {
     }
 
     async isChange() {
-        return this.prevStatus != BNodeStatus.INACTIVE && this.prevStatus != await this.update()
+        return this.prevStatus != BNodeStatus.INACTIVE && this.prevStatus != await this.run()
     }
 }
 
@@ -341,10 +359,10 @@ export class BDecorator extends BParent {
 }
 
 export enum BNodeStatus {
-    INACTIVE,
-    RUNNING,
-    SUCCESS,
-    FAILURE
+    INACTIVE = "INACTIVE",
+    RUNNING = "RUNNING",
+    SUCCESS = "SUCCESS",
+    FAILURE = "FAILURE"
 }
 
 export enum BConditionalType {

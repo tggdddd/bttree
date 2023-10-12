@@ -1,31 +1,42 @@
 import {TestTree} from "./tree/TestTree";
 import BTree from "./base/BNode";
 import {BNodeDebug} from "./base/nodeDebug";
+import {Singleton} from "./base/BUtils";
 
-class Manager {
+class Manager extends Singleton {
     trees:Array<BTree> = []
     debug:boolean = true
-    private _init(){
-        if (this.debug){
-            for (const tree of this.trees) {
-                BNodeDebug.getInstance<BNodeDebug>().renderTree(tree);
-            }
-        }
-    }
     constructor() {
+        super()
         this.trees.push(new TestTree("test"))
         this._init()
     }
-    run(){
+
+    async run() {
+        if (Manager.getInstance<Manager>().debug && BNodeDebug.pause) {
+            return
+        }
+        if (Manager.getInstance<Manager>().debug && BNodeDebug.delay) {
+            await new Promise(resolve => {
+                setTimeout(() => resolve(null), BNodeDebug.delay)
+            })
+        }
         for (const tree of this.trees) {
             tree.run().then()
         }
     }
+
+    private _init(){
+        if (this.debug){
+            const nodeDebug = BNodeDebug.getInstance<BNodeDebug>()
+            for (const tree of this.trees) {
+                nodeDebug.renderTree(tree);
+            }
+        }
+    }
 }
 
-const manager = new Manager();
-async function loop(){
-    manager.run()
+(async function loop() {
+    await Manager.getInstance<Manager>().run()
     requestAnimationFrame(loop)
-}
-// loop()
+})()
