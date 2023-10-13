@@ -1,39 +1,12 @@
-const path = require('path');
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const webpack = require("webpack");
-const autoprefixer = require('autoprefixer')
-const miniCssExtractPlugin = require('mini-css-extract-plugin')
+const {resolve} = require("path");
 module.exports = {
     mode: "development",
     entry: './src/manager.ts',
     devtool: "source-map",
     module: {
         rules: [
-            {
-                test: /\.(scss)$/,
-                use: [
-                    {
-                        loader: miniCssExtractPlugin.loader
-                        // loader: 'style-loader'
-                    },
-                    {
-                        loader: 'css-loader'
-                    },
-                    {
-                        loader: 'postcss-loader',
-                        options: {
-                            postcssOptions: {
-                                plugins: [
-                                    autoprefixer
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        loader: 'sass-loader'
-                    }
-                ]
-            },
             {
                 test: /\.tsx?$/,
                 use: 'ts-loader',
@@ -46,15 +19,10 @@ module.exports = {
     },
     output: {
         filename: 'bundle.js',
-        path: path.resolve(__dirname, 'dist'),
+        path: resolve(__dirname, 'dist'),
     },
     plugins: [
-        new HtmlWebpackPlugin(),
-        new miniCssExtractPlugin(),
-        new webpack.ProvidePlugin({
-            "$": "jquery",
-            "bootstrap": "bootstrap"
-        })
+        new HtmlWebpackPlugin()
     ],
     devServer: {
         open: true,

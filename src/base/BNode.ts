@@ -1,28 +1,11 @@
 import BUtils, {extendOf} from "./BUtils";
-import {BNodeDebug} from "./nodeDebug";
-import {Manager} from "../manager";
+
+;
 
 export class BNode {
 
     public name: string;
-    private _status: BNodeStatus = BNodeStatus.INACTIVE;
-    get status(): BNodeStatus {
-        return this._status
-    }
-
-    set status(val: BNodeStatus) {
-        if (BNodeDebug.debug) {
-            const debug = BNodeDebug.getInstance<BNodeDebug>();
-            if (val == BNodeStatus.INACTIVE) {
-                if (this._status != BNodeStatus.RUNNING) {
-                    debug.updateStatus(this.uid, this.key, this.status);
-                }
-            } else {
-                debug.updateStatus(this.uid, this.key, this.status);
-            }
-        }
-        this._status = val
-    }
+    public status: BNodeStatus = BNodeStatus.INACTIVE;
 
     public setName(val: string) {
         this.name = val;
@@ -145,11 +128,6 @@ export class BNode {
                     return status
                 }
             }
-        }
-        if (Manager.getInstance<Manager>().debug && BNodeDebug.delay) {
-            await new Promise(resolve => {
-                setTimeout(() => resolve(null), BNodeDebug.delay)
-            })
         }
         return status
     }
