@@ -23,10 +23,11 @@ export class ActionSkill extends BAction{
     async start() {
         await super.start();
         this.startTime = Date.now()
-        console.log("技能释放前摇")
+        console.log(`${this.name}释放前摇`)
     }
     async update(): Promise<BNodeStatus> {
         await super.update();
+        console.log(`${this.name}释放技能中`)
         if (Date.now() - this.startTime > this.duration){
             const old = Man.getInstance<Man>().hp
             Man.getInstance<Man>().hp -= this.use;
@@ -63,10 +64,15 @@ export class ConditionalHPRight extends BConditional{
     }
 }
 export class ActionRecovery extends BAction{
+    constructor(public value: number) {
+        super();
+
+    }
     async update(): Promise<BNodeStatus> {
         await super.update();
-        Man.getInstance<Man>().mp += 20;
-        console.log(`吃到食物，增加20滴血，目前血量${Man.getInstance<Man>().mp}`)
+        Man.getInstance<Man>().mp += this.value;
+        Man.getInstance<Man>().hp += this.value;
+        console.log(`吃到食物，增加20滴血与蓝，目前血量${Man.getInstance<Man>().mp}，蓝量${Man.getInstance<Man>().hp}`)
         return await super.update();
     }
 }

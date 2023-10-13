@@ -5,7 +5,7 @@ import {Singleton} from "./base/BUtils";
 
 export class Manager extends Singleton {
     trees:Array<BTree> = []
-    debug:boolean = true
+    debug: boolean = false
     constructor() {
         super()
         this.trees.push(new TestTree("test"))
@@ -17,7 +17,7 @@ export class Manager extends Singleton {
             return
         }
         for (const tree of this.trees) {
-            tree.run().then()
+            await tree.run().then()
         }
     }
 

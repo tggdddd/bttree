@@ -37,7 +37,7 @@ export class ChartData {
 }
 
 export class BNodeDebug extends Singleton {
-    static pause = false;
+    static pause = true;
     static debug = false;
     static delay: number = 0;
     static dataMap: Map<string, Map<string, ChartData>> = new Map();
@@ -51,6 +51,7 @@ export class BNodeDebug extends Singleton {
         super();
         BNodeDebug.debug = true;
         $("body").append(template)
+        $("#stop").prop("checked", true)
         document.addEventListener("ce:delay", function (e) {
             // @ts-ignore
             BNodeDebug.setDelay(e.value)
@@ -70,9 +71,6 @@ export class BNodeDebug extends Singleton {
     }
 
     public updateStatus(uid: string, key: string, status: BNodeStatus) {
-        if (status == BNodeStatus.INACTIVE) {
-            return
-        }
         BNodeDebug.dataMap.get(key).get(uid).avalue = status;
         this.flashChart(key);
     }
@@ -136,7 +134,11 @@ export class BNodeDebug extends Singleton {
             height++;
             const key = node.key
             const uid = node.uid
-            const data = new ChartData(node.name || node.constructor.name, node.status);
+            let name = node.name
+            if (name == null) {
+                name = node.constructor.name
+            }
+            const data = new ChartData(name, node.status);
             BNodeDebug.dataMap.get(key).set(uid, data);
             let childUid = BUtils.childFirstUID(uid);
             let childNode = BUtils.getNodeByUid(childUid, key);

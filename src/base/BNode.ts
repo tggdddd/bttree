@@ -3,18 +3,30 @@ import {BNodeDebug} from "./nodeDebug";
 import {Manager} from "../manager";
 
 export class BNode {
-    name: string = null
+
+    public name: string;
     private _status: BNodeStatus = BNodeStatus.INACTIVE;
     get status(): BNodeStatus {
         return this._status
     }
 
     set status(val: BNodeStatus) {
-        this._status = val
         if (BNodeDebug.debug) {
             const debug = BNodeDebug.getInstance<BNodeDebug>();
-            debug.updateStatus(this.uid, this.key, this.status);
+            if (val == BNodeStatus.INACTIVE) {
+                if (this._status != BNodeStatus.RUNNING) {
+                    debug.updateStatus(this.uid, this.key, this.status);
+                }
+            } else {
+                debug.updateStatus(this.uid, this.key, this.status);
+            }
         }
+        this._status = val
+    }
+
+    public setName(val: string) {
+        this.name = val;
+        return this;
     }
 
     uid: string = "" //标识树内节点
@@ -26,53 +38,12 @@ export class BNode {
         this.status = BNodeStatus.RUNNING
         if (!extendOf(this, BConditional)) {
             const executeNodes = BUtils.executeNodeMap.get(this.key);
-            BUtils.conditionMap.get(this.key).forEach(async conditional => {
-                // console.info("开始判断打断", conditional)
-                if (await conditional.isChange()) {
-                    console.log(conditional.constructor.name + "触发条件打断")
-                    let parentUid = conditional.uid
-                    executeNodes.forEach(executeNode => {
-                        parentUid = BUtils.getSameParentUid(parentUid, executeNode.uid);
-                        while (executeNode.uid != parentUid) {
-                            if (executeNode.status != BNodeStatus.INACTIVE) {
-                                executeNode.end()
-                            }
-                            executeNode = executeNode.parentNode()
-                        }
-                    })
-                    let linkNode = conditional as BNode;
-                    const arr = []
-                    while (linkNode.uid != parentUid) {
-                        arr.push(linkNode)
-                        linkNode = linkNode.parentNode()
-                    }
-                    for (let i = arr.length - 1; i > 0; i--) {
-                        await arr[i].start()
-                        if (extendOf(arr[i], BComposite)) {
-                            const compositeNode = arr[i]
-                            const childNode = arr[i + 1]
-                            if (extendOf(compositeNode, BCompositeRandom)) {
-                                // @ts-ignore
-                                compositeNode.runUid = BUtils.shuffleMap[compositeNode.key][childNode.uid]
-                            } else {
-                                // @ts-ignore
-                                compositeNode.runUid = childNode.uid
-                            }
-                        }
-                    }
-                    return
-                }
-            })
             executeNodes.add(this)
         }
     }
 
     async update(): Promise<BNodeStatus> {
-        if (Manager.getInstance<Manager>().debug && BNodeDebug.delay) {
-            await new Promise(resolve => {
-                setTimeout(() => resolve(null), BNodeDebug.delay)
-            })
-        }
+
         return this.status = BNodeStatus.SUCCESS
     }
 
@@ -135,6 +106,51 @@ export class BNode {
             this.prevStatus = status
             this.end()
         }
+        if (!extendOf(this, BConditional)) {
+            const executeNodes = BUtils.executeNodeMap.get(this.key);
+            const conditionls: Array<BConditional> = [];
+            BUtils.conditionMap.get(this.key).forEach(a => conditionls.push(a))
+            for (let conditional of conditionls) {
+                if (await conditional.isChange()) {
+                    console.error(conditional.constructor.name + "触发条件打断")
+                    let parentUid = conditional.uid
+                    executeNodes.forEach(executeNode => {
+                        parentUid = BUtils.getSameParentUid(parentUid, executeNode.uid);
+                        while (executeNode.uid != parentUid) {
+                            if (executeNode.status != BNodeStatus.INACTIVE) {
+                                executeNode.end()
+                            }
+                            executeNode = executeNode.parentNode()
+                        }
+                    })
+                    let linkNode = conditional as BNode;
+                    const arr: Array<BNode> = []
+                    while (linkNode.uid != parentUid) {
+                        arr.push(linkNode)
+                        linkNode = linkNode.parentNode()
+                    }
+                    for (let i = arr.length - 1; i > 1; i--) {
+                        await arr[i].start()
+                        if (extendOf(arr[i], BComposite)) {
+                            const compositeNode = arr[i] as BComposite
+                            const childNode = arr[i - 1]
+                            if (extendOf(compositeNode, BCompositeRandom)) {
+                                compositeNode.runUid = BUtils.shuffleMap[compositeNode.key][childNode.uid]
+                            } else {
+                                compositeNode.runUid = childNode.uid
+                            }
+                        }
+                    }
+                    await arr[1].start()
+                    return status
+                }
+            }
+        }
+        if (Manager.getInstance<Manager>().debug && BNodeDebug.delay) {
+            await new Promise(resolve => {
+                setTimeout(() => resolve(null), BNodeDebug.delay)
+            })
+        }
         return status
     }
 
@@ -177,7 +193,13 @@ export class BConditional extends BNode {
     }
 
     async isChange() {
-        return this.prevStatus != BNodeStatus.INACTIVE && this.prevStatus != await this.run()
+        if (this.prevStatus == BNodeStatus.INACTIVE) {
+            return false;
+        }
+        const prevStatus = this.prevStatus
+        const status = await this.run()
+        console.info(`执行条件判定${this.name} 当前状态${status} 此前状态${prevStatus}`)
+        return prevStatus != status
     }
 }
 
@@ -320,7 +342,10 @@ export class BCompositeBatchRace extends BComposite {
     }
 }
 
-export class BCompositeBatchAll extends BComposite {
+/**异步批量所有
+ * 全部执行完返回成功
+ * */
+export class BCompositeAllAsync extends BComposite {
     async start() {
         await super.start();
         if (this.runUid && this.runUid.length) {
@@ -364,6 +389,79 @@ export class BCompositeBatchAll extends BComposite {
     }
 }
 
+/**
+ * 同步批量执行
+ * 全部执行完返回成功
+ */
+export class BCompositeAll extends BComposite {
+    async start() {
+        await super.start();
+        if (this.runUid && this.runUid.length) {
+            const key = this.key
+            this.runUid.split(",").forEach(uid => {
+                BUtils.getNodeByUid(uid, key).end()
+            })
+        }
+        this.runUid = this.children.map(r => r.uid).join(",")
+    }
+
+    async update(): Promise<BNodeStatus> {
+        await super.update();
+        const key = this.key;
+        const running: Array<string> = []
+        const nodes = this.runUid.split(",").map(runUid => BUtils.getNodeByUid(runUid, key)).filter(a => a != null)
+        for (let node of nodes) {
+            const status = await node.run()
+            if (status == BNodeStatus.RUNNING) {
+                running.push(node.uid)
+            }
+        }
+        this.runUid = running.join(",")
+        if (running.length != 0) {
+            return BNodeStatus.RUNNING
+        }
+        return BNodeStatus.SUCCESS
+    }
+}
+
+/**
+ * 随机顺序同步批量执行
+ * 全部执行完返回成功
+ */
+export class BCompositeRandomAll extends BCompositeRandom {
+    async start() {
+        await super.start();
+        if (this.runUid && this.runUid.length) {
+            const key = this.key
+            this.runUid.split(",").forEach(uid => {
+                BUtils.getNodeByUid(uid, key).end()
+            })
+        }
+        this.runUid = this.children.map(r => r.uid).join(",")
+    }
+
+    async update(): Promise<BNodeStatus> {
+        await super.update();
+        const key = this.key;
+        const running: Array<string> = []
+        const nodes = this.runUid.split(",").map(runUid => BUtils.getNodeByUid(runUid, key)).filter(a => a != null)
+        for (let node of nodes) {
+            const status = await node.run()
+            if (status == BNodeStatus.RUNNING) {
+                running.push(node.uid)
+            }
+        }
+        this.runUid = running.join(",")
+        if (running.length != 0) {
+            return BNodeStatus.RUNNING
+        }
+        return BNodeStatus.SUCCESS
+    }
+}
+
+/**
+ *
+ */
 export class BDecorator extends BParent {
     constructor(...nodes: Array<BNode>) {
         super(...nodes);
